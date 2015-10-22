@@ -1,0 +1,3 @@
+rootProject.name = 'JavaAsync'
+include ':java-async', ':java-async-compiler'
+
