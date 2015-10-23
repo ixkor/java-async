@@ -16,19 +16,28 @@
 
 package net.xkor.java.async;
 
+import com.sun.tools.javac.tree.JCTree;
+import net.xkor.java.async.annotations.Async;
+
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
 public class JavaAsyncProcessor extends AbstractProcessor {
+    private JavacTools tools;
+    private AsyncTranslator translator;
 
     @Override
     public void init(ProcessingEnvironment procEnv) {
         super.init(procEnv);
+        tools = new JavacTools(procEnv);
+        translator = new AsyncTranslator(tools);
     }
 
     @Override
@@ -36,13 +45,18 @@ public class JavaAsyncProcessor extends AbstractProcessor {
         if (annotations == null || annotations.isEmpty()) {
             return false;
         }
+
+        for (Element element : roundEnv.getElementsAnnotatedWith(Async.class)) {
+            JCTree.JCMethodDecl methodTree = (JCTree.JCMethodDecl) tools.getTree(element);
+            methodTree.accept(translator);
+        }
+
         return true;
     }
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        HashSet<String> types = new HashSet<>();
-        return types;
+        return new HashSet<>(Arrays.asList(Async.class.getCanonicalName()));
     }
 
     @Override

@@ -65,7 +65,7 @@ subprojects {
             repo = 'maven'
             name = project.name
             websiteUrl = 'https://github.com/ixkor/java-async'
-            issueTrackerUrl = ''
+            issueTrackerUrl = 'https://github.com/ixkor/java-async/issues'
             vcsUrl = 'https://github.com/ixkor/java-async.git'
             licenses = ['Apache-2.0']
             publicDownloadNumbers = true
