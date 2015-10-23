@@ -14,11 +14,24 @@
  * limitations under the License.
  */
 
-apply plugin: 'java'
+package net.xkor.java.async;
 
-dependencies {
-    compile files("${System.properties['java.home']}/../lib/tools.jar")
-    compile project(':java-async')
-    testCompile 'junit:junit:4.12'
-    testCompile 'com.google.testing.compile:compile-testing:0.6'
+import javax.annotation.processing.Messager;
+import javax.lang.model.element.Element;
+import javax.tools.Diagnostic;
+
+public class Logger {
+    private Messager messager;
+
+    public Logger(Messager messager) {
+        this.messager = messager;
+    }
+
+    public void error(String message, Object... args) {
+        messager.printMessage(Diagnostic.Kind.ERROR, String.format(message, args));
+    }
+
+    public void error(Element element, String message, Object... args) {
+        messager.printMessage(Diagnostic.Kind.ERROR, String.format(message, args), element);
+    }
 }

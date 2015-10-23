@@ -17,7 +17,11 @@
 package net.xkor.java.async;
 
 public final class JavaAsync {
-    public static <T> T await() {
-        throw new UnsupportedOperationException("You should not use JavaAsync.await() outside of methods annotated with @Async");
+    public static <T> T await(Task<T> task) {
+        throw new UnsupportedOperationException("You can not use JavaAsync.await() outside of methods annotated with @Async");
+    }
+
+    public static <T> Task<T> asResult(T result) {
+        throw new UnsupportedOperationException("You can not use JavaAsync.asResult() outside of methods annotated with @Async");
     }
 }

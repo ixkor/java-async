@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-apply plugin: 'java'
+package net.xkor.java.async;
 
-dependencies {
-    compile files("${System.properties['java.home']}/../lib/tools.jar")
-    compile project(':java-async')
-    testCompile 'junit:junit:4.12'
-    testCompile 'com.google.testing.compile:compile-testing:0.6'
+public class Task<T> {
 }

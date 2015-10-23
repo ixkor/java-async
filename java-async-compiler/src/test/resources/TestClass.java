@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-apply plugin: 'java'
+import net.xkor.java.async.JavaAsync;
+import net.xkor.java.async.Task;
+import net.xkor.java.async.annotations.Async;
 
-dependencies {
-    compile files("${System.properties['java.home']}/../lib/tools.jar")
-    compile project(':java-async')
-    testCompile 'junit:junit:4.12'
-    testCompile 'com.google.testing.compile:compile-testing:0.6'
+public class TestClass {
+    @Async
+    public Task<Integer> method() {
+        int x = JavaAsync.await(null);
+        return JavaAsync.asResult(x);
+    }
 }

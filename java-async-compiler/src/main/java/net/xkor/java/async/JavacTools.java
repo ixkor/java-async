@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2015 Aleksei Skoriatin
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed To in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.xkor.java.async;
 
 import com.sun.tools.javac.api.JavacTrees;
@@ -21,9 +37,10 @@ public class JavacTools {
     private final ParserFactory parserFactory;
     private final JavacElements javacElements;
     private final JavacProcessingEnvironment environment;
-    private final JavacTypes typeUtils;
+    private final JavacTypes javacTypes;
     private final JavacTrees trees;
     private final Types types;
+    private final Logger logger;
     private Method newParserMethod;
 
     public JavacTools(ProcessingEnvironment environment) {
@@ -31,9 +48,11 @@ public class JavacTools {
         maker = TreeMaker.instance(this.environment.getContext());
         parserFactory = ParserFactory.instance(this.environment.getContext());
         javacElements = this.environment.getElementUtils();
-        typeUtils = this.environment.getTypeUtils();
+        javacTypes = this.environment.getTypeUtils();
         trees = JavacTrees.instance(this.environment);
         types = Types.instance(this.environment.getContext());
+
+        logger = new Logger(environment.getMessager());
 
         try {
             newParserMethod = ParserFactory.class.getMethod("newParser", CharSequence.class, Boolean.TYPE, Boolean.TYPE, Boolean.TYPE);
@@ -53,8 +72,8 @@ public class JavacTools {
         return javacElements;
     }
 
-    public JavacTypes getTypeUtils() {
-        return typeUtils;
+    public JavacTypes getJavacTypes() {
+        return javacTypes;
     }
 
     public JavacTrees getTrees() {
@@ -75,5 +94,9 @@ public class JavacTools {
         } catch (IllegalAccessException | InvocationTargetException ignored) {
         }
         return null;
+    }
+
+    public Logger getLogger() {
+        return logger;
     }
 }

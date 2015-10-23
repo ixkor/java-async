@@ -14,11 +14,19 @@
  * limitations under the License.
  */
 
-apply plugin: 'java'
+package net.xkor.java.async;
 
-dependencies {
-    compile files("${System.properties['java.home']}/../lib/tools.jar")
-    compile project(':java-async')
-    testCompile 'junit:junit:4.12'
-    testCompile 'com.google.testing.compile:compile-testing:0.6'
+import com.google.common.truth.Truth;
+import com.google.testing.compile.JavaFileObjects;
+import com.google.testing.compile.JavaSourceSubjectFactory;
+import org.junit.Test;
+
+public class ProcessorTest {
+    @Test
+    public void test() {
+        Truth.assert_().about(JavaSourceSubjectFactory.javaSource())
+                .that(JavaFileObjects.forResource("TestClass.java"))
+                .processedWith(new JavaAsyncProcessor())
+                .compilesWithoutError();
+    }
 }
