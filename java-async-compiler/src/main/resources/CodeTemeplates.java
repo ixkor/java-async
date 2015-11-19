@@ -14,22 +14,26 @@
  * limitations under the License.
  */
 
-package net.xkor.java.async;
+import net.xkor.java.async.Task;
 
-public abstract class Task<T> {
-    private TaskCallback<T> callback;
+public class CodeTemeplates {
+    public net.xkor.java.async.Task asyncMethod() {
+        return new Task() {
+            public doStep
+            try
 
-    private volatile int state;
-    private static final int CREATED = 0;
-    private static final int RUNNING = 1;
-    private static final int COMPLETED = 2;
-    private static final int FAULTED = 3;
-    private static final int CANCELLED = 4;
+            {
+            }
 
-    public abstract void start();
+            catch(
+            Throwable error
+            )
 
-    public void start(TaskCallback<T> callback) {
-        this.callback = callback;
-        start();
+            {
+                if (error instanceof net.xkor.java.async.AsyncTranslator) {
+
+                }
+            }
+        }
     }
 }

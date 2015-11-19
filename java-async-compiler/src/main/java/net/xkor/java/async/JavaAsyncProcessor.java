@@ -17,6 +17,7 @@
 package net.xkor.java.async;
 
 import com.sun.tools.javac.tree.JCTree;
+import com.sun.tools.javac.util.Pair;
 import net.xkor.java.async.annotations.Async;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -47,7 +48,9 @@ public class JavaAsyncProcessor extends AbstractProcessor {
         }
 
         for (Element element : roundEnv.getElementsAnnotatedWith(Async.class)) {
-            JCTree.JCMethodDecl methodTree = (JCTree.JCMethodDecl) tools.getTree(element);
+            Pair<JCTree, JCTree.JCCompilationUnit> treeAndTopLevel = tools.getJavacElements().getTreeAndTopLevel(element, null, null);
+            tools.setToplevel(treeAndTopLevel.snd);
+            JCTree.JCMethodDecl methodTree = (JCTree.JCMethodDecl) treeAndTopLevel.fst;
             methodTree.accept(translator);
         }
 

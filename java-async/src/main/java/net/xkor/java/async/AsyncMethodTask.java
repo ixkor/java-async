@@ -16,20 +16,19 @@
 
 package net.xkor.java.async;
 
-public abstract class Task<T> {
-    private TaskCallback<T> callback;
+public abstract class AsyncMethodTask<T> extends Task<T> {
+    private int step = 0;
 
-    private volatile int state;
-    private static final int CREATED = 0;
-    private static final int RUNNING = 1;
-    private static final int COMPLETED = 2;
-    private static final int FAULTED = 3;
-    private static final int CANCELLED = 4;
+    @Override
+    public void start() {
 
-    public abstract void start();
-
-    public void start(TaskCallback<T> callback) {
-        this.callback = callback;
-        start();
     }
+
+    protected abstract void doStep();
+
+    protected int getStep() {
+        return step;
+    }
+
+    protected void
 }
