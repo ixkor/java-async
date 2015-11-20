@@ -22,31 +22,32 @@ import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.tree.TreeTranslator;
-import com.sun.tools.javac.util.Name;
+import com.sun.tools.javac.util.List;
+
 import net.xkor.java.async.annotations.Async;
 
-public class AsyncTranslator extends TreeTranslator {
-    private static final String CATCH_PARAM_NAME = "error";
+import java.util.HashMap;
 
+import javax.lang.model.element.Name;
+
+public class AsyncTranslator extends TreeTranslator {
     private final JavacTools tools;
     private final Logger logger;
     private final TreeMaker maker;
-    private final Symbol.ClassSymbol taskSymbol;
-    private final Symbol.ClassSymbol asyncExceptionSymbol;
-    private final Symbol.ClassSymbol throwableSymbol;
+    private final Symbol.ClassSymbol taskClassSymbol;
+    private final Symbol.ClassSymbol taskAsyncMethodClassSymbol;
+    private final Symbol.MethodSymbol doStepMethodSymbol;
+
+    private JCTree.JCClassDecl taskNewClass;
+    private HashMap<Name, Name> namesMap = new HashMap<>();
 
     public AsyncTranslator(JavacTools tools) {
         this.tools = tools;
         logger = tools.getLogger();
         maker = tools.getMaker();
-        taskSymbol = tools.getJavacElements().getTypeElement(Task.class.getCanonicalName());
-        asyncExceptionSymbol = tools.getJavacElements().getTypeElement(AsyncException.class.getCanonicalName());
-        throwableSymbol = tools.getJavacElements().getTypeElement(Throwable.class.getCanonicalName());
-
-//        tools.createParser("")
-        Name exceptionName = tools.getJavacElements().getName(CATCH_PARAM_NAME);
-        maker.Catch(maker.VarDef(maker.Modifiers(0), exceptionName,
-                tools.qualIdent(throwableSymbol), null), );
+        taskClassSymbol = tools.getJavacElements().getTypeElement(Task.class.getCanonicalName());
+        taskAsyncMethodClassSymbol = tools.getJavacElements().getTypeElement(AsyncMethodTask.class.getCanonicalName());
+        doStepMethodSymbol = tools.findMethodRecursive(taskAsyncMethodClassSymbol, "doStep");
     }
 
     @Override
@@ -62,18 +63,34 @@ public class AsyncTranslator extends TreeTranslator {
     @Override
     public void visitMethodDef(JCTree.JCMethodDecl methodTree) {
         Type returnType = methodTree.getReturnType().type;
-        if (returnType.asElement() != taskSymbol) {
+        if (returnType.asElement() != taskClassSymbol) {
             logger.error(methodTree.sym, "Method annotated with @%s must return a result of type %s",
                     Async.class.getSimpleName(), Task.class.getSimpleName());
             result = methodTree;
             return;
         }
 
-        super.visitMethodDef(methodTree);
+        namesMap.clear();
 
         maker.at(methodTree);
-        Name exceptionName = tools.getJavacElements().getName(CATCH_PARAM_NAME);
-        maker.Catch(maker.VarDef(maker.Modifiers(0), exceptionName,
-                tools.qualIdent(throwableSymbol), null), );
+        taskNewClass = maker.AnonymousClassDef(maker.Modifiers(0), List.<JCTree>nil());
+//        taskNewClass.extending = tools.qualIdent(taskAsyncMethodClassSymbol);
+
+        for (JCTree.JCVariableDecl param : methodTree.params) {
+            JCTree.JCVariableDecl field = maker.VarDef(maker.Modifiers(Flags.PRIVATE), param.name, param.vartype, null);
+            taskNewClass.defs = taskNewClass.defs.append(field);
+        }
+
+        JCTree.JCMethodDecl doStepMethod = tools.overrideMethod(taskNewClass, doStepMethodSymbol);
+        doStepMethod.body.stats = methodTree.body.stats;
+
+        methodTree.body.stats = List.<JCTree.JCStatement>of(maker.Return(maker.NewClass(
+                null,
+                List.<JCTree.JCExpression>nil(),
+                tools.qualIdent(taskAsyncMethodClassSymbol),
+                List.<JCTree.JCExpression>nil(),
+                taskNewClass)));
+
+        super.visitMethodDef(methodTree);
     }
 }

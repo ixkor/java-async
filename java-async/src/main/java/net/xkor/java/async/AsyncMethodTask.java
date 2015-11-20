@@ -18,17 +18,54 @@ package net.xkor.java.async;
 
 public abstract class AsyncMethodTask<T> extends Task<T> {
     private int step = 0;
+    Object awaitResult;
+    Throwable awaitError;
 
     @Override
-    public void start() {
-
+    public void doWork() {
+        try {
+            doStep();
+        } catch (Throwable error) {
+            if (error instanceof AsyncException) {
+                fail(error.getCause());
+            } else {
+                fail(error);
+            }
+        }
     }
 
-    protected abstract void doStep();
+    protected abstract void doStep() throws Throwable;
 
     protected int getStep() {
         return step;
     }
 
-    protected void
+    protected <ST> TaskCallback<ST> nextStep() {
+        step++;
+        return new TaskCallback<ST>() {
+            @Override
+            public void onComplete(ST result) {
+                setAwaitResult(result, null);
+            }
+
+            @Override
+            public void onFail(Throwable error) {
+                setAwaitResult(null, error);
+            }
+        };
+    }
+
+    protected <ST> void setAwaitResult(ST result, Throwable error) {
+        awaitResult = result;
+        awaitError = error;
+        doWork();
+    }
+
+    protected <ST> ST getStepResult() throws Throwable {
+        if (awaitError != null) {
+            throw awaitError;
+        }
+        return (ST) awaitResult;
+    }
+
 }

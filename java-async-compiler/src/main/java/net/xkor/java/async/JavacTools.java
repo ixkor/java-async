@@ -17,9 +17,11 @@
 package net.xkor.java.async;
 
 import com.sun.tools.javac.api.JavacTrees;
+import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.Kinds;
 import com.sun.tools.javac.code.Scope;
 import com.sun.tools.javac.code.Symbol;
+import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.model.JavacTypes;
@@ -29,15 +31,26 @@ import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.Context;
+import com.sun.tools.javac.util.Filter;
+import com.sun.tools.javac.util.List;
+import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.util.Names;
 import com.sun.tools.javac.util.Pair;
 
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.Element;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Iterator;
+
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
 
 public class JavacTools {
+    private static final Filter<Symbol> EMPTY_FILTER = new Filter<Symbol>() {
+        public boolean accepts(Symbol var1) {
+            return true;
+        }
+    };
+
     private TreeMaker maker;
     private final ParserFactory parserFactory;
     private final JavacElements javacElements;
@@ -141,4 +154,64 @@ public class JavacTools {
         maker = maker.forToplevel(toplevel);
     }
 
+    public JCTree.JCExpression typeToTree(Type type) {
+        return typeToTree(type.asElement());
+    }
+
+    public JCTree.JCExpression typeToTree(Symbol.TypeSymbol typeSymbol) {
+        return createParser(typeSymbol.getQualifiedName().toString()).parseType();
+    }
+
+    public JCTree.JCMethodDecl overrideMethod(JCTree.JCClassDecl classTree, Symbol.MethodSymbol methodSymbol) {
+        JCTree.JCExpression returnType = typeToTree(methodSymbol.getReturnType());
+        List<JCTree.JCVariableDecl> params = List.nil();
+        int paramNum = 0;
+        for (Type paramType : methodSymbol.asType().getParameterTypes()) {
+            Name paramName = javacElements.getName("param" + paramNum++);
+            JCTree.JCExpression returnTypeName = typeToTree(paramType);
+            params = params.append(maker.at(classTree).VarDef(maker.Modifiers(Flags.PARAMETER), paramName, returnTypeName, null));
+        }
+        long modifiers = methodSymbol.flags() & (Flags.PUBLIC | Flags.PRIVATE | Flags.PROTECTED);
+        JCTree.JCAnnotation overrideAnnotation = maker.Annotation(maker.Ident(javacElements.getName("Override")), List.<JCTree.JCExpression>nil());
+
+        JCTree.JCMethodDecl methodDecl = maker.MethodDef(
+                maker.Modifiers(modifiers, List.of(overrideAnnotation)),
+                methodSymbol.getSimpleName(),
+                returnType,
+                List.<JCTree.JCTypeParameter>nil(),
+                params,
+                List.<JCTree.JCExpression>nil(),
+                maker.Block(0, List.<JCTree.JCStatement>nil()),
+                null);
+
+        classTree.defs = classTree.defs.append(methodDecl);
+
+        return methodDecl;
+    }
+
+    public Symbol findClassMember(Symbol.ClassSymbol classSymbol, String name) {
+        return findClassMember(classSymbol, name, EMPTY_FILTER);
+    }
+
+    public Symbol findClassMember(Symbol.ClassSymbol classSymbol, String name, Filter<Symbol> filter) {
+        Symbol member = null;
+        Iterator<Symbol> iterator = classSymbol.members().getElementsByName(javacElements.getName(name), filter).iterator();
+        if (iterator.hasNext()) {
+            member = iterator.next();
+        }
+        return member;
+    }
+
+    public Symbol.MethodSymbol findMethodRecursive(Symbol.ClassSymbol classSymbol, String name) {
+        return findMethodRecursive(classSymbol, name, EMPTY_FILTER);
+    }
+
+    public Symbol.MethodSymbol findMethodRecursive(Symbol.ClassSymbol classSymbol, String name, Filter<Symbol> filter) {
+        Symbol.MethodSymbol methodSymbol;
+        do {
+            methodSymbol = (Symbol.MethodSymbol) findClassMember(classSymbol, name, filter);
+            classSymbol = (Symbol.ClassSymbol) classSymbol.getSuperclass().asElement();
+        } while (classSymbol != null && methodSymbol == null);
+        return methodSymbol;
+    }
 }

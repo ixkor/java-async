@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-public class CodeTemeplates {
-    public net.xkor.java.async.Task asyncMethod() {
-        return new net.xkor.java.async.AsyncMethodTask<>() {
-            public doStep() {
-            }
-        }
-    }
+package net.xkor.java.async;
+
+public class TaskCanceledException extends RuntimeException {
 }

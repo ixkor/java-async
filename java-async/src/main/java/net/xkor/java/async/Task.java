@@ -19,17 +19,76 @@ package net.xkor.java.async;
 public abstract class Task<T> {
     private TaskCallback<T> callback;
 
-    private volatile int state;
+    private final Object sync = new Object();
+    private volatile int state = CREATED;
     private static final int CREATED = 0;
     private static final int RUNNING = 1;
     private static final int COMPLETED = 2;
     private static final int FAULTED = 3;
     private static final int CANCELLED = 4;
 
-    public abstract void start();
+    private T result;
+    private Throwable error;
+
+    public void start() {
+        if (state != CREATED) {
+            return;
+        }
+
+        state = RUNNING;
+        doWork();
+    }
+
+    protected abstract void doWork();
+
+    protected void complete(T result) {
+        synchronized (sync) {
+            if (state != RUNNING) {
+                return;
+            }
+            this.result = result;
+            state = COMPLETED;
+        }
+        if (callback != null) {
+            callback.onComplete(result);
+        }
+    }
+
+    protected void fail(Throwable error) {
+        synchronized (sync) {
+            if (state != RUNNING) {
+                return;
+            }
+            this.error = error;
+            state = FAULTED;
+        }
+        if (callback != null) {
+            callback.onFail(error);
+        }
+    }
+
+    public void cancel() {
+        synchronized (sync) {
+            if (state != RUNNING) {
+                return;
+            }
+            state = CANCELLED;
+        }
+        if (callback != null) {
+            callback.onFail(new TaskCanceledException());
+        }
+    }
 
     public void start(TaskCallback<T> callback) {
         this.callback = callback;
         start();
+    }
+
+    public void setCallback(TaskCallback<T> callback) {
+        this.callback = callback;
+    }
+
+    public TaskCallback<T> getCallback() {
+        return callback;
     }
 }
