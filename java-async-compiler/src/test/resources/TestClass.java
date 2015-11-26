@@ -15,16 +15,21 @@
  */
 
 import net.xkor.java.async.JavaAsync;
-import net.xkor.java.async.Task;
+import net.xkor.java.async.*;
 import net.xkor.java.async.annotations.Async;
 
 public class TestClass {
 
     @Async
     public Task<Integer> method(int prm) {
-        for (int i = 5; i < 4; i++) {
+        int x = JavaAsync.await(new Task<Integer>() {
+            @Override
+            protected void doWork() {
+            }
+        });
+        for (int i = 0; i < 4; i++) {
+            JavaAsync.await(Task.delay(1000));
         }
-        int x = JavaAsync.await(null);
         return JavaAsync.asResult(x);
     }
 }

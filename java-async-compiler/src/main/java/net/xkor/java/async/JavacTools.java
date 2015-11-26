@@ -22,7 +22,6 @@ import com.sun.tools.javac.code.Kinds;
 import com.sun.tools.javac.code.Scope;
 import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.code.Type;
-import com.sun.tools.javac.code.TypeTags;
 import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.model.JavacTypes;
@@ -44,6 +43,7 @@ import java.util.Iterator;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.type.TypeKind;
 
 public class JavacTools {
     private static final Filter<Symbol> EMPTY_FILTER = new Filter<Symbol>() {
@@ -165,20 +165,20 @@ public class JavacTools {
     }
 
     public JCTree.JCExpression typeToTree(Symbol.TypeSymbol typeSymbol) {
-        if (typeSymbol.type.tag <= TypeTags.VOID) {
-            return maker.TypeIdent(typeSymbol.type.tag);
+        if (typeSymbol.type.getKind().ordinal() <= TypeKind.VOID.ordinal()) {
+            return maker.TypeIdent(typeSymbol.type.getTag());
         } else {
             return qualIdent(typeSymbol);
         }
 //        return createParser(typeSymbol.getQualifiedName().toString()).parseType();
     }
 
-    public JCTree.JCMethodDecl overrideMethod(JCTree.JCClassDecl classTree, Symbol.MethodSymbol methodSymbol, String... paramNames) {
+    public JCTree.JCMethodDecl overrideMethod(JCTree.JCClassDecl classTree, Symbol.MethodSymbol methodSymbol, CharSequence... paramNames) {
         JCTree.JCExpression returnType = typeToTree(methodSymbol.getReturnType());
         List<JCTree.JCVariableDecl> params = List.nil();
         int paramNum = 0;
         for (Type paramType : methodSymbol.asType().getParameterTypes()) {
-            String name;
+            CharSequence name;
             if (paramNum < paramNames.length) {
                 name = paramNames[paramNum];
             } else {

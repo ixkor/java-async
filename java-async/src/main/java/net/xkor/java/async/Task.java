@@ -91,4 +91,8 @@ public abstract class Task<T> {
     public TaskCallback<T> getCallback() {
         return callback;
     }
+
+    public static DelayTask delay(long milliseconds) {
+        return new DelayTask(milliseconds);
+    }
 }

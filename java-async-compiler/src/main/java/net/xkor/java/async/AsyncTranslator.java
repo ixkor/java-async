@@ -27,9 +27,12 @@ import com.sun.tools.javac.util.Name;
 
 import net.xkor.java.async.annotations.Async;
 
+import java.util.Stack;
+
 
 public class AsyncTranslator extends TreeTranslator {
-    public static final String TASK_PARAM_NAME = "task$";
+    private final Name taskParamName;
+
     private final JavacTools tools;
     private final Logger logger;
     private final TreeMaker maker;
@@ -37,13 +40,17 @@ public class AsyncTranslator extends TreeTranslator {
     private final Symbol.ClassSymbol taskAsyncMethodClassSymbol;
     private final Symbol.ClassSymbol taskAsyncClassSymbol;
     private final Symbol.MethodSymbol doStepMethodSymbol;
-    private final Symbol.MethodSymbol setAwaitResultMethodSymbol;
+    private final Symbol.MethodSymbol getStepResultMethodSymbol;
+    private final Symbol.MethodSymbol getStepMethodSymbol;
     private final Symbol.MethodSymbol completeMethodSymbol;
+    private final Symbol.MethodSymbol nextStepMethodSymbol;
 
     private JCTree.JCClassDecl taskNewClass;
 
     private Type methodReturnType;
     private Symbol.MethodSymbol methodSymbol;
+    private Stack<JCTree> treeStack = new Stack<>();
+    private int awaitNum;
 
     public AsyncTranslator(JavacTools tools) {
         this.tools = tools;
@@ -53,21 +60,20 @@ public class AsyncTranslator extends TreeTranslator {
         taskClassSymbol = tools.getJavacElements().getTypeElement(Task.class.getCanonicalName());
 
         taskAsyncMethodClassSymbol = tools.getJavacElements().getTypeElement(AsyncMethodTask.class.getCanonicalName());
-        setAwaitResultMethodSymbol = tools.findMethodRecursive(taskAsyncMethodClassSymbol, "setAwaitResult");
+        getStepResultMethodSymbol = tools.findMethodRecursive(taskAsyncMethodClassSymbol, "getStepResult");
+        getStepMethodSymbol = tools.findMethodRecursive(taskAsyncMethodClassSymbol, "getStep");
         completeMethodSymbol = tools.findMethodRecursive(taskAsyncMethodClassSymbol, "complete");
+        nextStepMethodSymbol = tools.findMethodRecursive(taskAsyncMethodClassSymbol, "nextStep");
 
         taskAsyncClassSymbol = tools.getJavacElements().getTypeElement(AsyncTask.class.getCanonicalName());
         doStepMethodSymbol = tools.findMethodRecursive(taskAsyncClassSymbol, "doStep");
+
+        taskParamName = tools.getJavacElements().getName("task$");
     }
 
     @Override
     public void visitClassDef(JCTree.JCClassDecl jcClassDecl) {
         result = jcClassDecl;
-    }
-
-    @Override
-    public void visitBlock(JCTree.JCBlock jcBlock) {
-        super.visitBlock(jcBlock);
     }
 
     @Override
@@ -81,6 +87,8 @@ public class AsyncTranslator extends TreeTranslator {
             return;
         }
         methodReturnType = returnType.getTypeArguments().get(0);
+        treeStack.clear();
+        awaitNum = 0;
 
         maker.at(methodTree);
         taskNewClass = maker.AnonymousClassDef(maker.Modifiers(0), List.<JCTree>nil());
@@ -94,8 +102,15 @@ public class AsyncTranslator extends TreeTranslator {
             param.mods.flags |= Flags.FINAL;
         }
         JCTree.JCBlock translatedBody = translate(methodTree.body);
+        maker.at(methodTree);
 
-        JCTree.JCMethodDecl doStepMethod = tools.overrideMethod(taskNewClass, doStepMethodSymbol, TASK_PARAM_NAME);
+        translatedBody.stats = translatedBody.stats.prepend(maker.Switch(maker.Apply(
+                null,
+                maker.Select(maker.Ident(taskParamName), getStepMethodSymbol),
+                List.<JCTree.JCExpression>nil()
+        ), List.<JCTree.JCCase>nil()));
+
+        JCTree.JCMethodDecl doStepMethod = tools.overrideMethod(taskNewClass, doStepMethodSymbol, taskParamName);
         JCTree.JCVariableDecl taskParam = doStepMethod.params.get(0);
         taskParam.vartype = maker.TypeApply(taskParam.vartype, List.of(tools.typeToTree(methodReturnType)));
         doStepMethod.body = translatedBody;
@@ -112,7 +127,6 @@ public class AsyncTranslator extends TreeTranslator {
                         taskNewClass)),
                 null))));
 
-//        methodTree.body = translate(methodTree.body);
         result = methodTree;
     }
 
@@ -122,11 +136,14 @@ public class AsyncTranslator extends TreeTranslator {
             JCTree.JCMethodInvocation methodInvocation = (JCTree.JCMethodInvocation) jcReturn.expr;
             if (methodInvocation.meth instanceof JCTree.JCFieldAccess) {
                 if (methodInvocation.meth.toString().equals("JavaAsync.asResult")) {
+                    List<JCTree.JCExpression> translated = translate(methodInvocation.args);
+                    maker.at(jcReturn);
                     result = maker.Block(0, List.of(
                             maker.Exec(maker.Apply(
                                     null,
-                                    maker.Select(maker.Ident(tools.getJavacElements().getName(TASK_PARAM_NAME)), completeMethodSymbol),
-                                    translate(methodInvocation.args))),
+                                    maker.Select(maker.Ident(taskParamName), completeMethodSymbol),
+                                    translated
+                            )),
                             maker.Return(null)
                     ));
                     return;
@@ -149,5 +166,81 @@ public class AsyncTranslator extends TreeTranslator {
         } else {
             result = null;
         }
+    }
+
+    @Override
+    public void visitApply(JCTree.JCMethodInvocation methodInvocation) {
+        if (methodInvocation.meth instanceof JCTree.JCFieldAccess) {
+            if (methodInvocation.meth.toString().equals("JavaAsync.await")) {
+                // TODO update message
+                logger.error(methodSymbol, "You can use method JavaAsync.await only in ...");
+            }
+        }
+        super.visitApply(methodInvocation);
+    }
+
+    @Override
+    public void visitExec(JCTree.JCExpressionStatement expressionStatement) {
+        JCTree.JCAssign assign = null;
+        JCTree.JCExpression expression = expressionStatement.expr;
+        if (expression instanceof JCTree.JCAssign) {
+            assign = (JCTree.JCAssign) expressionStatement.expr;
+            expression = assign.rhs;
+        }
+        if (expression instanceof JCTree.JCMethodInvocation) {
+            JCTree.JCMethodInvocation methodInvocation = (JCTree.JCMethodInvocation) expression;
+            if (methodInvocation.meth instanceof JCTree.JCFieldAccess) {
+                if (methodInvocation.meth.toString().equals("JavaAsync.await")) {
+                    JCTree.JCExpression translated = translate(methodInvocation.args.head);
+                    maker.at(expressionStatement);
+                    expression = maker.Apply(
+                            null,
+                            maker.Select(maker.Ident(taskParamName), getStepResultMethodSymbol),
+                            List.<JCTree.JCExpression>nil()
+                    );
+                    result = maker.Block(0, List.of(
+                            maker.Exec(maker.Apply(
+                                    null,
+                                    maker.Select(translated, tools.getJavacElements().getName("start")),
+                                    List.<JCTree.JCExpression>of(maker.Apply(
+                                            null,
+                                            maker.Select(maker.Ident(taskParamName), nextStepMethodSymbol),
+                                            List.<JCTree.JCExpression>nil()
+                                    ))
+                            )),
+                            maker.If(maker.Literal(true), maker.Return(null), null),
+                            maker.Labelled(tools.getJavacElements().getName("$await" + awaitNum), expressionStatement)
+                    ));
+                    awaitNum++;
+                    if (assign != null) {
+                        assign.rhs = expression;
+                    } else {
+                        expressionStatement.expr = expression;
+                    }
+                    return;
+                }
+            }
+        }
+        super.visitExec(expressionStatement);
+    }
+
+    @Override
+    public <T extends JCTree> T translate(T t) {
+        treeStack.push(t);
+        T translated = super.translate(t);
+        treeStack.pop();
+        return translated;
+    }
+
+    private JCTree getParentTree() {
+        return treeStack.elementAt(treeStack.size() - 2);
+    }
+
+    private JCTree getParentTree(JCTree child) {
+        int index = treeStack.lastIndexOf(child) - 1;
+        if (index >= 0) {
+            return treeStack.elementAt(index);
+        }
+        return null;
     }
 }
