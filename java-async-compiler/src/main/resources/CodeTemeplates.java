@@ -16,7 +16,7 @@
 
 public class CodeTemeplates {
     public net.xkor.java.async.Task asyncMethod() {
-        return new net.xkor.java.async.AsyncMethodTask<>() {
+        return new net.xkor.java.async.AsyncMethodTask<>(asyncTask) {
             public doStep() {
             }
         }

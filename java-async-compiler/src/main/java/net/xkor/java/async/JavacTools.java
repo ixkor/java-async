@@ -22,6 +22,7 @@ import com.sun.tools.javac.code.Kinds;
 import com.sun.tools.javac.code.Scope;
 import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.code.Type;
+import com.sun.tools.javac.code.TypeTags;
 import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.model.JavacTypes;
@@ -61,6 +62,7 @@ public class JavacTools {
     private final Types types;
     private final Logger logger;
     private Method newParserMethod;
+    private final Symbol.PackageSymbol javaLangPackage;
 
     public JavacTools(ProcessingEnvironment environment) {
         this.environment = (JavacProcessingEnvironment) environment;
@@ -74,6 +76,8 @@ public class JavacTools {
         names = Names.instance(context);
 
         logger = new Logger(environment.getMessager());
+
+        javaLangPackage = javacElements.getPackageElement("java.lang");
 
         try {
             newParserMethod = ParserFactory.class.getMethod("newParser", CharSequence.class, Boolean.TYPE, Boolean.TYPE, Boolean.TYPE);
@@ -126,7 +130,9 @@ public class JavacTools {
     }
 
     boolean isUnqualifiable(Symbol sym) {
-        if (sym.name != this.names.empty && sym.owner != null && sym.owner.name != this.names.empty && sym.owner.kind != Kinds.MTH && sym.owner.kind != Kinds.VAR) {
+        if (sym.name != this.names.empty && sym.owner != null && sym.owner.name != this.names.empty
+                && sym.owner.kind != Kinds.MTH && sym.owner.kind != Kinds.VAR
+                && sym.owner != javaLangPackage) {
             if (sym.kind == Kinds.TYP && maker.toplevel != null) {
                 Scope.Entry entry = maker.toplevel.namedImportScope.lookup(sym.name);
                 if (entry.scope != null) {
@@ -159,20 +165,39 @@ public class JavacTools {
     }
 
     public JCTree.JCExpression typeToTree(Symbol.TypeSymbol typeSymbol) {
-        return createParser(typeSymbol.getQualifiedName().toString()).parseType();
+        if (typeSymbol.type.tag <= TypeTags.VOID) {
+            return maker.TypeIdent(typeSymbol.type.tag);
+        } else {
+            return qualIdent(typeSymbol);
+        }
+//        return createParser(typeSymbol.getQualifiedName().toString()).parseType();
     }
 
-    public JCTree.JCMethodDecl overrideMethod(JCTree.JCClassDecl classTree, Symbol.MethodSymbol methodSymbol) {
+    public JCTree.JCMethodDecl overrideMethod(JCTree.JCClassDecl classTree, Symbol.MethodSymbol methodSymbol, String... paramNames) {
         JCTree.JCExpression returnType = typeToTree(methodSymbol.getReturnType());
         List<JCTree.JCVariableDecl> params = List.nil();
         int paramNum = 0;
         for (Type paramType : methodSymbol.asType().getParameterTypes()) {
-            Name paramName = javacElements.getName("param" + paramNum++);
+            String name;
+            if (paramNum < paramNames.length) {
+                name = paramNames[paramNum];
+            } else {
+                name = "param" + paramNum;
+            }
+            paramNum++;
+            Name paramName = javacElements.getName(name);
             JCTree.JCExpression returnTypeName = typeToTree(paramType);
-            params = params.append(maker.at(classTree).VarDef(maker.Modifiers(Flags.PARAMETER), paramName, returnTypeName, null));
+            params = params.append(maker.at(classTree).VarDef(
+                    maker.Modifiers(Flags.PARAMETER), paramName, returnTypeName, null));
         }
         long modifiers = methodSymbol.flags() & (Flags.PUBLIC | Flags.PRIVATE | Flags.PROTECTED);
         JCTree.JCAnnotation overrideAnnotation = maker.Annotation(maker.Ident(javacElements.getName("Override")), List.<JCTree.JCExpression>nil());
+
+        List<JCTree.JCExpression> methodThrows = List.nil();
+        for (Type throwType : methodSymbol.asType().getThrownTypes()) {
+            JCTree.JCExpression throwTypeName = typeToTree(throwType);
+            methodThrows = methodThrows.append(throwTypeName);
+        }
 
         JCTree.JCMethodDecl methodDecl = maker.MethodDef(
                 maker.Modifiers(modifiers, List.of(overrideAnnotation)),
@@ -180,7 +205,7 @@ public class JavacTools {
                 returnType,
                 List.<JCTree.JCTypeParameter>nil(),
                 params,
-                List.<JCTree.JCExpression>nil(),
+                methodThrows,
                 maker.Block(0, List.<JCTree.JCStatement>nil()),
                 null);
 

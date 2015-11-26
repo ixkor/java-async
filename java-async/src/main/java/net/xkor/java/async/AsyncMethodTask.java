@@ -16,15 +16,20 @@
 
 package net.xkor.java.async;
 
-public abstract class AsyncMethodTask<T> extends Task<T> {
+public final class AsyncMethodTask<T> extends Task<T> {
     private int step = 0;
-    Object awaitResult;
-    Throwable awaitError;
+    private Object awaitResult;
+    private Throwable awaitError;
+    private AsyncTask<T> asyncTask;
+
+    public AsyncMethodTask(AsyncTask<T> asyncTask){
+        this.asyncTask = asyncTask;
+    }
 
     @Override
     public void doWork() {
         try {
-            doStep();
+            asyncTask.doStep(this);
         } catch (Throwable error) {
             if (error instanceof AsyncException) {
                 fail(error.getCause());
@@ -34,13 +39,11 @@ public abstract class AsyncMethodTask<T> extends Task<T> {
         }
     }
 
-    protected abstract void doStep() throws Throwable;
-
-    protected int getStep() {
+    public int getStep() {
         return step;
     }
 
-    protected <ST> TaskCallback<ST> nextStep() {
+    public <ST> TaskCallback<ST> nextStep() {
         step++;
         return new TaskCallback<ST>() {
             @Override
@@ -55,17 +58,21 @@ public abstract class AsyncMethodTask<T> extends Task<T> {
         };
     }
 
-    protected <ST> void setAwaitResult(ST result, Throwable error) {
+    public <ST> void setAwaitResult(ST result, Throwable error) {
         awaitResult = result;
         awaitError = error;
         doWork();
     }
 
-    protected <ST> ST getStepResult() throws Throwable {
+    public <ST> ST getStepResult() throws Throwable {
         if (awaitError != null) {
             throw awaitError;
         }
         return (ST) awaitResult;
     }
 
+    @Override
+    public void complete(T result) {
+        super.complete(result);
+    }
 }

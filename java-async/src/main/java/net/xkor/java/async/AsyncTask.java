@@ -14,17 +14,8 @@
  * limitations under the License.
  */
 
-import net.xkor.java.async.JavaAsync;
-import net.xkor.java.async.Task;
-import net.xkor.java.async.annotations.Async;
+package net.xkor.java.async;
 
-public class TestClass {
-
-    @Async
-    public Task<Integer> method(int prm) {
-        for (int i = 5; i < 4; i++) {
-        }
-        int x = JavaAsync.await(null);
-        return JavaAsync.asResult(x);
-    }
+public interface AsyncTask<T> {
+    void doStep(AsyncMethodTask<T> task) throws Throwable;
 }
