@@ -14,6 +14,21 @@
  * limitations under the License.
  */
 
-rootProject.name = 'JavaAsync'
-include ':java-async', ':java-async-compiler', ':java-async-plugin'
+package net.xkor.java.async;
 
+import org.gradle.api.Project;
+import org.gradle.testfixtures.ProjectBuilder;
+import org.junit.Test;
+
+import java.util.Collections;
+
+public class PluginTests {
+    @Test
+    public void test() {
+        Project project = ProjectBuilder.builder().build();
+//        Project testProject = ProjectBuilder.builder().withName("test").withParent(project).build();
+        project.file(".").mkdir();
+        project.apply(Collections.singletonMap("plugin", "android"));
+        project.apply(Collections.singletonMap("plugin", "java-async"));
+    }
+}
