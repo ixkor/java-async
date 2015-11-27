@@ -166,11 +166,11 @@ public class JavacTools {
 
     public JCTree.JCExpression typeToTree(Symbol.TypeSymbol typeSymbol) {
         if (typeSymbol.type.getKind().ordinal() <= TypeKind.VOID.ordinal()) {
-            return maker.TypeIdent(typeSymbol.type.getTag());
+//            return maker.TypeIdent(typeSymbol.type.getTag());
+            return createParser(typeSymbol.toString()).parseType();
         } else {
             return qualIdent(typeSymbol);
         }
-//        return createParser(typeSymbol.getQualifiedName().toString()).parseType();
     }
 
     public JCTree.JCMethodDecl overrideMethod(JCTree.JCClassDecl classTree, Symbol.MethodSymbol methodSymbol, CharSequence... paramNames) {
