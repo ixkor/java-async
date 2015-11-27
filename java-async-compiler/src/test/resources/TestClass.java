@@ -28,7 +28,7 @@ public class TestClass {
             }
         });
         for (int i = 0; i < 4; i++) {
-            JavaAsync.await(Task.delay(1000));
+            JavaAsync.await(Task.sleep(1000));
         }
         return JavaAsync.asResult(x);
     }

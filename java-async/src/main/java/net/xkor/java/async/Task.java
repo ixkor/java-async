@@ -92,7 +92,34 @@ public abstract class Task<T> {
         return callback;
     }
 
-    public static DelayTask delay(long milliseconds) {
-        return new DelayTask(milliseconds);
+    public static Task<Void> sleep(final long milliseconds) {
+        return new Task<Void>() {
+            private Thread thread;
+
+            @Override
+            protected void doWork() {
+                thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(milliseconds);
+                            complete(null);
+                        } catch (InterruptedException e) {
+                            fail(e);
+                        }
+                    }
+                });
+                thread.start();
+            }
+
+            @Override
+            public void cancel() {
+                if (thread != null) {
+                    thread.interrupt();
+                    thread = null;
+                }
+                super.cancel();
+            }
+        };
     }
 }
