@@ -4,7 +4,7 @@ buildscript {
         mavenLocal()
     }
     dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:0.6'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.5'
     }
 }
 
@@ -15,60 +15,62 @@ subprojects {
         }
     }
 
-    apply plugin: 'java'
-    apply plugin: 'maven'
-    apply plugin: 'maven-publish'
-    apply plugin: 'com.jfrog.bintray'
+    if (!project.name.equals('java-async-tests')) {
+        apply plugin: 'java'
+        apply plugin: 'maven'
+        apply plugin: 'maven-publish'
+        apply plugin: 'com.jfrog.bintray'
 
-    sourceCompatibility = 1.7
-    targetCompatibility = 1.7
+        sourceCompatibility = 1.7
+        targetCompatibility = 1.7
 
-    task javadocJar(type: Jar) {
-        classifier = 'javadoc'
-        from javadoc
-    }
+        task javadocJar(type: Jar) {
+            classifier = 'javadoc'
+            from javadoc
+        }
 
-    task sourcesJar(type: Jar) {
-        classifier = 'sources'
-        from sourceSets.main.allSource
-    }
+        task sourcesJar(type: Jar) {
+            classifier = 'sources'
+            from sourceSets.main.allSource
+        }
 
-    artifacts {
-        archives sourcesJar, javadocJar
-    }
+        artifacts {
+            archives sourcesJar, javadocJar
+        }
 
-    publishing {
-        publications {
-            mavenJava(MavenPublication) {
-                from components.java
+        publishing {
+            publications {
+                mavenJava(MavenPublication) {
+                    from components.java
 
-                artifact sourcesJar
-                artifact javadocJar
+                    artifact sourcesJar
+                    artifact javadocJar
+                }
             }
         }
-    }
 
-    repositories {
-        jcenter()
-        mavenLocal()
-    }
-
-    bintray {
-        if (project.hasProperty("bintrayApiKey")) {
-            user = bintrayUserName
-            key = bintrayApiKey
+        repositories {
+            jcenter()
+            mavenLocal()
         }
 
-        publications = ['mavenJava']
-        publish = true
-        pkg {
-            repo = 'maven'
-            name = project.name
-            websiteUrl = 'https://github.com/ixkor/java-async'
-            issueTrackerUrl = 'https://github.com/ixkor/java-async/issues'
-            vcsUrl = 'https://github.com/ixkor/java-async.git'
-            licenses = ['Apache-2.0']
-            publicDownloadNumbers = true
+        bintray {
+            if (project.hasProperty("bintrayApiKey")) {
+                user = bintrayUserName
+                key = bintrayApiKey
+            }
+
+            publications = ['mavenJava']
+            publish = true
+            pkg {
+                repo = 'maven'
+                name = project.name
+                websiteUrl = 'https://github.com/ixkor/java-async'
+                issueTrackerUrl = 'https://github.com/ixkor/java-async/issues'
+                vcsUrl = 'https://github.com/ixkor/java-async.git'
+                licenses = ['Apache-2.0']
+                publicDownloadNumbers = true
+            }
         }
     }
 }

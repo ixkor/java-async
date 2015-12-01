@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-package net.xkor.java.async;
+import net.xkor.java.async.JavaAsync;
+import net.xkor.java.async.*;
+import net.xkor.java.async.annotations.Async;
 
-import org.gradle.api.Project;
-import org.gradle.testfixtures.ProjectBuilder;
-import org.junit.Test;
+public class TestClass {
 
-import java.util.Collections;
-
-public class PluginTests {
-    @Test
-    public void test() {
-        Project project = ProjectBuilder.builder().build();
-//        Project testProject = ProjectBuilder.builder().withName("test").withParent(project).build();
-        project.file(".").mkdir();
-        project.apply(Collections.singletonMap("plugin", "android"));
-        project.apply(Collections.singletonMap("plugin", "java-async"));
+    @Async
+    public Task<Integer> method(int prm) {
+        int x = JavaAsync.await(new Task<Integer>() {
+            @Override
+            protected void doWork() {
+            }
+        });
+        for (int i = 0; i < 4; i++) {
+            JavaAsync.await(Task.sleep(1000));
+        }
+        return JavaAsync.asResult(x);
     }
 }

@@ -15,5 +15,5 @@
  */
 
 rootProject.name = 'JavaAsync'
-include ':java-async', ':java-async-compiler', ':java-async-plugin'
+include ':java-async', ':java-async-compiler', ':java-async-plugin', ':java-async-tests'
 

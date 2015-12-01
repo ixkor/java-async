@@ -1,0 +1,43 @@
+buildscript {
+    repositories {
+        jcenter()
+        mavenLocal()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:1.3.0'
+        classpath 'com.neenbedankt.gradle.plugins:android-apt:1.8'
+        classpath 'net.xkor.java-async:java-async-plugin:1.0.0-SNAPSHOT'
+//        classpath project(':java-async-plugin')
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'android-apt'
+apply plugin: 'java-async'
+
+repositories {
+    jcenter()
+    mavenLocal()
+}
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "23.0.2"
+
+    defaultConfig {
+        minSdkVersion 16
+        targetSdkVersion 23
+        versionCode 1
+        versionName "1.0"
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
+    }
+}
+
+dependencies {
+    compile project(':java-async')
+    apt project(':java-async-compiler')
+    testCompile 'junit:junit:4.12'
+}
