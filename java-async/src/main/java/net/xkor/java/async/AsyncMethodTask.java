@@ -43,11 +43,15 @@ public final class AsyncMethodTask<T> extends Task<T> {
         return step;
     }
 
-    public <ST> TaskCallback<ST> nextStep() {
+    public <ST> void startNextStep(Task<ST> task) {
+        task.start(this.<ST>nextStep());
+    }
+
+    private <ST> TaskCallback<ST> nextStep() {
         step++;
         return new TaskCallback<ST>() {
             @Override
-            public void onComplete(ST result) {
+            public void onComplete(Object result) {
                 setAwaitResult(result, null);
             }
 
@@ -58,7 +62,7 @@ public final class AsyncMethodTask<T> extends Task<T> {
         };
     }
 
-    public <ST> void setAwaitResult(ST result, Throwable error) {
+    public void setAwaitResult(Object result, Throwable error) {
         awaitResult = result;
         awaitError = error;
         doWork();

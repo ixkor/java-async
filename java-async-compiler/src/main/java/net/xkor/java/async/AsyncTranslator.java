@@ -43,7 +43,7 @@ public class AsyncTranslator extends TreeTranslator {
     private final Symbol.MethodSymbol getStepResultMethodSymbol;
     private final Symbol.MethodSymbol getStepMethodSymbol;
     private final Symbol.MethodSymbol completeMethodSymbol;
-    private final Symbol.MethodSymbol nextStepMethodSymbol;
+    private final Symbol.MethodSymbol startNextStepMethodSymbol;
 
     private JCTree.JCClassDecl taskNewClass;
 
@@ -63,7 +63,7 @@ public class AsyncTranslator extends TreeTranslator {
         getStepResultMethodSymbol = tools.findMethodRecursive(taskAsyncMethodClassSymbol, "getStepResult");
         getStepMethodSymbol = tools.findMethodRecursive(taskAsyncMethodClassSymbol, "getStep");
         completeMethodSymbol = tools.findMethodRecursive(taskAsyncMethodClassSymbol, "complete");
-        nextStepMethodSymbol = tools.findMethodRecursive(taskAsyncMethodClassSymbol, "nextStep");
+        startNextStepMethodSymbol = tools.findMethodRecursive(taskAsyncMethodClassSymbol, "startNextStep");
 
         taskAsyncClassSymbol = tools.getJavacElements().getTypeElement(AsyncTask.class.getCanonicalName());
         doStepMethodSymbol = tools.findMethodRecursive(taskAsyncClassSymbol, "doStep");
@@ -201,12 +201,8 @@ public class AsyncTranslator extends TreeTranslator {
                     result = maker.Block(0, List.of(
                             maker.Exec(maker.Apply(
                                     null,
-                                    maker.Select(translated, tools.getJavacElements().getName("start")),
-                                    List.<JCTree.JCExpression>of(maker.Apply(
-                                            null,
-                                            maker.Select(maker.Ident(taskParamName), nextStepMethodSymbol),
-                                            List.<JCTree.JCExpression>nil()
-                                    ))
+                                    maker.Select(maker.Ident(taskParamName), startNextStepMethodSymbol),
+                                    List.of(translated)
                             )),
                             maker.If(maker.Literal(true), maker.Return(null), null),
                             maker.Labelled(tools.getJavacElements().getName("$await" + awaitNum), expressionStatement)
