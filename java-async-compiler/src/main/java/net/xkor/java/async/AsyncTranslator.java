@@ -26,6 +26,7 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Name;
 
 import net.xkor.java.async.annotations.Async;
+import net.xkor.java.async.annotations.AsyncMethodInternal;
 
 import java.util.Stack;
 
@@ -114,6 +115,8 @@ public class AsyncTranslator extends TreeTranslator {
         JCTree.JCVariableDecl taskParam = doStepMethod.params.get(0);
         taskParam.vartype = maker.TypeApply(taskParam.vartype, List.of(tools.typeToTree(methodReturnType)));
         doStepMethod.body = translatedBody;
+        doStepMethod.mods.annotations = doStepMethod.mods.annotations.append(
+                tools.createAnnotation(AsyncMethodInternal.class));
 
         methodTree.body = maker.Block(0, List.<JCTree.JCStatement>of(maker.Return(maker.NewClass(
                 null,
@@ -204,7 +207,12 @@ public class AsyncTranslator extends TreeTranslator {
                                     maker.Select(maker.Ident(taskParamName), startNextStepMethodSymbol),
                                     List.of(translated)
                             )),
-                            maker.If(maker.Literal(true), maker.Return(null), null),
+                            maker.Exec(maker.Apply(
+                                    null,
+                                    maker.Select(maker.Ident(tools.getJavacElements().getName("JavaAsync")), tools.getJavacElements().getName("fakeReturn")),
+                                    List.<JCTree.JCExpression>nil()
+                            )),
+//                            maker.If(maker.Literal(true), maker.Return(null), null),
                             maker.Labelled(tools.getJavacElements().getName("$await" + awaitNum), expressionStatement)
                     ));
                     awaitNum++;

@@ -37,6 +37,7 @@ import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.util.Names;
 import com.sun.tools.javac.util.Pair;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Iterator;
@@ -238,5 +239,9 @@ public class JavacTools {
             classSymbol = (Symbol.ClassSymbol) classSymbol.getSuperclass().asElement();
         } while (classSymbol != null && methodSymbol == null);
         return methodSymbol;
+    }
+
+    public JCTree.JCAnnotation createAnnotation(Class<? extends Annotation> annotation) {
+        return maker.Annotation(qualIdent(javacElements.getTypeElement(annotation.getCanonicalName())), List.<JCTree.JCExpression>nil());
     }
 }

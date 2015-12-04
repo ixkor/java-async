@@ -24,4 +24,8 @@ public final class JavaAsync {
     public static <T> Task<T> asResult(T result) {
         throw new UnsupportedOperationException("You can not use JavaAsync.asResult() outside of methods annotated with @Async");
     }
+
+    public static void fakeReturn() {
+        throw new UnsupportedOperationException("You can not use JavaAsync.fakeReturn(). This method only for internal usage.");
+    }
 }

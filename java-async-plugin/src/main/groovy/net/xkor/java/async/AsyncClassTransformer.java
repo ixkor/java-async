@@ -16,26 +16,58 @@
 
 package net.xkor.java.async;
 
-import net.xkor.java.async.annotations.Async;
+import net.xkor.java.async.annotations.AsyncMethodInternal;
 
+import javassist.CannotCompileException;
 import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.build.IClassTransformer;
 import javassist.build.JavassistBuildException;
+import javassist.expr.ExprEditor;
+import javassist.expr.MethodCall;
 
 public class AsyncClassTransformer implements IClassTransformer {
     @Override
     public void applyTransformations(CtClass ctClass) throws JavassistBuildException {
         for (CtMethod method : ctClass.getMethods()) {
-            if (method.hasAnnotation(Async.class)) {
+            if (method.hasAnnotation(AsyncMethodInternal.class)) {
+                handleMethod(method);
             }
         }
+    }
+
+    private void handleMethod(CtMethod method) throws JavassistBuildException {
+        try {
+            method.instrument(new ExprEditor() {
+                @Override
+                public void edit(MethodCall m) throws CannotCompileException {
+                    if (JavaAsync.class.getCanonicalName().equals(m.getClassName()) && "fakeReturn".equals(m.getMethodName())) {
+                        m.replace("{label" + m.getLineNumber() + ": $_ = $proceed($$);}");
+                    }
+                }
+            });
+        } catch (CannotCompileException e) {
+            throw new JavassistBuildException(e);
+        }
+
+//        CodeIterator iterator = method.getMethodInfo().getCodeAttribute().iterator();
+//        while (iterator.hasNext()) {
+//            int index;
+//            try {
+//                index = iterator.next();
+//            } catch (BadBytecode badBytecode) {
+//                badBytecode.printStackTrace();
+//                break;
+//            }
+//            int op = iterator.byteAt(index);
+//            System.out.println(Mnemonic.OPCODE[op]);
+//        }
     }
 
     @Override
     public boolean shouldTransform(CtClass ctClass) throws JavassistBuildException {
         for (CtMethod method : ctClass.getMethods()) {
-            if (method.hasAnnotation(Async.class)) {
+            if (method.hasAnnotation(AsyncMethodInternal.class)) {
                 return true;
             }
         }

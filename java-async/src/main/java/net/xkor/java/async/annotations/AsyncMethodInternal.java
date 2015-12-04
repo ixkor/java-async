@@ -14,27 +14,14 @@
  * limitations under the License.
  */
 
-package net.xkor.java.async;
+package net.xkor.java.async.annotations;
 
-import com.github.stephanenicolas.morpheus.AbstractMorpheusPlugin;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import org.gradle.api.Project;
-
-import javassist.build.IClassTransformer;
-
-public class JavaAsyncPlugin extends AbstractMorpheusPlugin {
-    @Override
-    protected Class getPluginExtension() {
-        return null;
-    }
-
-    @Override
-    protected String getExtension() {
-        return null;
-    }
-
-    @Override
-    public IClassTransformer[] getTransformers(Project project) {
-        return new IClassTransformer[]{new AsyncClassTransformer()};
-    }
+@Retention(RetentionPolicy.CLASS)
+@Target(ElementType.METHOD)
+public @interface AsyncMethodInternal {
 }
